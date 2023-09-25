@@ -1,3 +1,4 @@
 pytube3
 moviepy
 asyncio
+opencv-python
