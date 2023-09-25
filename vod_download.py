@@ -6,10 +6,13 @@ import os
 import asyncio
 
 def on_progress(stream, chunk, bytes_remaining):
-    total_size = stream.filesize
-    bytes_downloaded = total_size - bytes_remaining
-    percentage_of_completion = bytes_downloaded / total_size * 100
-    print(percentage_of_completion)
+    filesize = stream.filesize
+    current = ((filesize - bytes_remaining)/filesize)
+    percent = ('{0:.1f}').format(current*100)
+    progress = int(50*current)
+    status = '█' * progress + '-' * (50 - progress)
+    sys.stdout.write(' ↳ |{bar}| {percent}%\r'.format(bar=status, percent=percent))
+    sys.stdout.flush()
 
 async def download_vod(url: str="https://www.youtube.com/watch?v=99k-EAMBuM8", verbose: bool=False) -> str:
     """
@@ -35,7 +38,7 @@ async def download_vod(url: str="https://www.youtube.com/watch?v=99k-EAMBuM8", v
             f"Author: {yt.author}")
         print("Views: {:,}\n".format(yt.views))
 
-        print(f"Downloading \"{vod.title}\"..")
+    print(f"Downloading \"{vod.title}\"..")
     vod.download(output_path='./vods/')
     return './vods/'+str(vod.title), int(vod.resolution[:-1])
 
