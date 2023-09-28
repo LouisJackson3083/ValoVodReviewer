@@ -1,9 +1,6 @@
 import cv2
 import numpy as np
 
-frame = cv2.imread('./vods/frame.png', cv2.IMREAD_COLOR)
-windowName = 'vod'
-
 class ChangeEffects():
     saved_blur_amt = 3
     saved_saturation_amt = 3
@@ -108,7 +105,6 @@ class ChangeEffects():
         # Dilate amount
         kernel = np.ones((dilate_amt, dilate_amt), np.uint8)
         frame_copy = cv2.dilate(frame_copy, kernel)
-
         
         res = cv2.bitwise_and(frame,frame,mask = frame_copy)
         cv2.imshow(windowName, frame_copy)
@@ -126,4 +122,50 @@ class ChangeEffects():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-ChangeEffects()
+# ChangeEffects()
+
+
+frame = cv2.imread('./vods/frame.png', cv2.IMREAD_COLOR)
+windowName = 'vod'
+
+frame_shape = frame.shape
+mask = cv2.imread('./minimaps/split.png')
+# mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+yoff = int(frame_shape[0]*0.095)
+xoff = int(frame_shape[1]*0.09)
+new_shape = (int(frame_shape[0]*0.88), int(frame_shape[1]*0.88))
+mask = cv2.resize(mask, new_shape, interpolation=cv2.INTER_LINEAR)
+yoff_max = min(yoff+mask.shape[0], frame_shape[0])
+xoff_max = min(xoff+mask.shape[1], frame_shape[1])
+mask_final = np.zeros(frame_shape, dtype="uint8")
+mask_final[yoff:yoff_max, xoff:xoff_max] = mask[0:yoff_max-yoff, 0:xoff_max-xoff]
+mask_gray = cv2.cvtColor(mask_final, cv2.COLOR_BGR2GRAY)
+frame = cv2.bitwise_and(frame, frame, mask=mask_gray)
+
+# cv2.imshow('mask_gray', mask_gray)
+# cv2.imshow('frame_new', frame)
+
+mask_final_blur = cv2.cvtColor(mask_final, cv2.COLOR_BGR2GRAY)
+frame_new_blur = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+cv2.imshow('mask_gray_blur', mask_final_blur)
+cv2.imshow('frame_new_blur', frame_new_blur)
+
+for i in range(yoff, yoff_max):
+    for j in range(xoff, xoff_max):
+        if (frame_new_blur[i, j] == mask_final_blur[i, j]).any():
+            frame[i, j] = 0
+        else:
+            frame[i, j] = frame[i, j]
+
+
+# if (frame_gray[yoff:yoff_max, xoff:xoff_max] == mask_final[0:yoff_max-yoff, 0:xoff_max-xoff]).all():
+#     frame[yoff:yoff_max, xoff:xoff_max] = 0
+# else:
+#     frame[yoff:yoff_max, xoff:xoff_max] = frame[yoff:yoff_max, xoff:xoff_max]
+
+
+
+cv2.imshow(windowName, frame)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
