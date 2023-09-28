@@ -14,13 +14,13 @@ async def main() -> None:
         vod_path=vod_path, 
         vod_resolution=vod_resolution, 
         vod_start='00:07:41 ',
-        vod_end='00:10:24',
+        vod_end='00:08:24',
     )
 
-    os.remove(vod_path+'.mp4')
+    # os.remove(vod_path+'.mp4')
     
     add_mask(vod_path=vod_path+'_EDITED.mp4', vod_map=vod_map, out_path=vod_path+'_FINAL.mp4')
-    os.remove(vod_path+'_EDITED.mp4')
+    # os.remove(vod_path+'_EDITED.mp4')
 
 if __name__ == '__main__':
     asyncio.run(main())
