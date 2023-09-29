@@ -104,10 +104,14 @@ class Vod_Masker():
         self.out.release()
         cv2.destroyAllWindows()
 
+    def get_output_path(self):
+        return self.out_path
+
 if __name__ == '__main__':
     vod_path = './vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_EDITED.mp4'
-    Vod_Masker(
+    mask = Vod_Masker(
         vod_path=vod_path,
         vod_map='split',
         verbose=True,
     )
+    print(mask.get_output_path())
