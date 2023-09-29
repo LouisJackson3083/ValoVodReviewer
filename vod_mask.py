@@ -1,199 +1,113 @@
 import cv2
 import numpy as np
 
-# image_path = 'test.png'
-# mask_path = './minimaps/split.png'
-
-# image = cv2.imread(image_path)
-# cv2.imshow("Original", image)
-# cv2.waitKey(0)
-
-# mask = cv2.imread(mask_path)
-# mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-# h, w = mask.shape
-# yoff = 0
-# xoff = 0
-# mask_final = np.zeros(image.shape[:2], dtype="uint8")
-# mask_final[yoff:yoff+h, xoff:xoff+w] = mask
-# cv2.imshow("binary mask", mask_final)
-# cv2.waitKey(0)
-
-# masked = cv2.bitwise_and(image, image, mask=mask_final)
-# cv2.imshow("Mask Applied to Image", masked)
-# cv2.waitKey(0)
-
-def get_map(vod_path: str):
+class Vod_Masker():
     """
-    returns:
-    split - split
-    -1 - ?
+    A class that applies a binary mask to a vod and saves he masked vod to an output location
+    args:
+        vod_path - a string that represents the location to the vod
+        vod_map - a string that represents the map of the vod
+        verbose - a bool that can be turned on to see the output of each step
     """
-    if 'split' in vod_path.lower():
-        return 'split'
-    else:
-        return -1
 
-def get_mask(vod_map: str, mask_path: str, vod_shape: tuple):
-    if (vod_map == 'split'):
-        yscale = 0.88
-        xscale = 0.88
-        yoff = 0.095
-        xoff = 0.09
+    vod = None
+    vod_map = None
+    vod_path = None
+    vod_shape = None
+    vod_fps = None
+    out = None
+    out_path = None
+    mask = None
+    verbose = None
 
-    yoff = int(vod_shape[0]*yoff)
-    xoff = int(vod_shape[1]*xoff)
-    mask = cv2.imread(mask_path)
-    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    new_shape = (int(vod_shape[0]*xscale), int(vod_shape[1]*yscale))
-    mask = cv2.resize(mask, new_shape, interpolation= cv2.INTER_LINEAR)
-    yoff_max = min(yoff+mask.shape[0], vod_shape[0])
-    xoff_max = min(xoff+mask.shape[1], vod_shape[1])
-    print(yoff_max,vod_shape[0])
+    def __init__(self, vod_path: str, vod_map: str, verbose: bool = False):
+        self.verbose = verbose
 
-    print(vod_shape)
-    mask_final = np.zeros(vod_shape, dtype="uint8")
-    mask_final[yoff:yoff_max, xoff:xoff_max] = mask[0:yoff_max-yoff, 0:xoff_max-xoff]
-    return mask_final
-
-def add_mask(vod_path: str, vod_map: str, out_path: str):
-    # vod_map = get_map(vod_path=vod_path)
-    mask_path = './minimaps/'+vod_map+'.png'
-
-    vod = cv2.VideoCapture(vod_path)
-    vod_shape = (int(vod.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(vod.get(cv2.CAP_PROP_FRAME_WIDTH)))
-    vod_fps = vod.get(cv2.CAP_PROP_FPS)
-    out = cv2.VideoWriter(
-        out_path,
-        cv2.VideoWriter_fourcc(*'mp4v'), 
-        vod_fps, 
-        (vod_shape[1],vod_shape[0])
-    )
-
-    mask = get_mask(vod_map=vod_map, mask_path=mask_path, vod_shape=vod_shape)
-
-    while vod.isOpened():
-        ret, frame = vod.read()
-        if not ret: # if frame is read correctly ret is True
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-
-        frame = cv2.bitwise_and(frame, frame, mask=mask)
-        out.write(frame)
-        cv2.imshow("Mask Applied to Image", frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    vod.release()
-    out.release()
-    cv2.destroyAllWindows()
-
-def change_value(value):
-    return value
-
-def highlight_color(vod_path: str, team: str, out_path: str):
-    windowName = 'vod'
-
-    vod = cv2.VideoCapture(vod_path)
-    vod_shape = (int(vod.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(vod.get(cv2.CAP_PROP_FRAME_WIDTH)))
-    vod_fps = vod.get(cv2.CAP_PROP_FPS)
-    out = cv2.VideoWriter(
-        out_path,
-        cv2.VideoWriter_fourcc(*'mp4v'), 
-        vod_fps, 
-        (vod_shape[1],vod_shape[0])
-    )
-
-    while vod.isOpened():
-        ret, frame = vod.read()
-            
-        if not ret: # if frame is read correctly ret is True
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
+        # Initialize vod related variables
+        self.vod_path = vod_path
+        self.vod_map = vod_map
+        self.vod = cv2.VideoCapture(self.vod_path)
+        self.vod_shape = (int(self.vod.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(self.vod.get(cv2.CAP_PROP_FRAME_WIDTH)))
+        self.vod_fps = self.vod.get(cv2.CAP_PROP_FPS)
         
-        frame_blurred = cv2.blur(frame, (3, 3))
-        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype("float32")
-        (h, s, v) = cv2.split(frame_hsv)
-        s = s*2
-        s = np.clip(s,0,255)
-        frame_hsv = cv2.merge([h,s,v])
+        # Initialize output video related variables
+        self.out_path = vod_path[:-10]+'MASKED.mp4'
+        self.out = cv2.VideoWriter(
+            self.out_path,
+            cv2.VideoWriter_fourcc(*'mp4v'), 
+            self.vod_fps, 
+            (self.vod_shape[1],self.vod_shape[0])
+        )
 
-        lower_limit = np.array([0, 155, 155])
-        upper_limit = np.array([360, 255, 255])
+        self.mask = self.get_mask()
+
+        self.apply_mask()
+
+    def get_mask(self):
+        if (self.vod_map == 'split'): # get the default scaling and offsets for the map
+            yscale = 0.88
+            xscale = 0.88
+            yoff = 0.095
+            xoff = 0.09
         
-        frame_limited = cv2.inRange(frame_hsv, lower_limit, upper_limit)
-        kernel = np.ones((3, 3), np.uint8)
-        frame_limited = cv2.dilate(frame_limited, kernel)
-        # frame_limited = cv2.erode(frame_limited, kernel)
-        # frame_limited = cv2.cvtColor(frame_limited, cv2.COLOR_GRAY2BGR)
-        # frame_limited = cv2.cvtColor(frame_limited, cv2.COLOR_BGR2GRAY)
-        # mask = cv2.cvtColor(frame_limited, cv2.COLOR_HSV2BGR_FULL)
+        # get the minimap path, and load it as a grayscale image
+        mask_path = './minimaps/'+self.vod_map+'.png'
+        mask = cv2.imread(mask_path)
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
 
+        # here we are changing the x & y offset based on the vod resolution
+        yoff = int(self.vod_shape[0]*yoff)
+        xoff = int(self.vod_shape[1]*xoff)
 
-        # mask = cv2.bitwise_and(mask, mask, mask = mask_blurred)
-        # result = cv2.bitwise_not(frame, frame, mask = mask)
+        # create a new shape for the mask based on the vod scale, and resize the minimap
+        new_mask_shape = (int(self.vod_shape[0]*xscale), int(self.vod_shape[1]*yscale))
+        # NOTE: might want to look at other interpolation methods?
+        mask = cv2.resize(mask, new_mask_shape, interpolation=cv2.INTER_LINEAR)
 
-        # (h, s, v) = cv2.split(mask)
+        # here we clip the values to the boundaries of the vod shape
+        yoff_max = min(yoff+mask.shape[0], self.vod_shape[0])
+        xoff_max = min(xoff+mask.shape[1], self.vod_shape[1])
+        yoff = max(0, yoff)
+        xoff = max(0, xoff)
 
-        # detector = cv2.SimpleBlobDetector()
-        # keypoints = detector.detect(frame_limited)
-        # frame_with_keypoints = cv2.drawKeypoints(frame_limited, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        	
-        out.write(frame_limited)
-        cv2.imshow(windowName, frame_limited)
-
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    vod.release()
-    out.release()
-    cv2.destroyAllWindows()
-
-def combine_masks(vod_path_1: str, vod_path_2: str, out_path: str):
-    vod_1 = cv2.VideoCapture(vod_path_1)
-    vod_2 = cv2.VideoCapture(vod_path_2)
-    vod_shape = (int(vod_1.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(vod_1.get(cv2.CAP_PROP_FRAME_WIDTH)))
-    vod_fps = vod_1.get(cv2.CAP_PROP_FPS)
-    out = cv2.VideoWriter(
-        out_path,
-        cv2.VideoWriter_fourcc(*'mp4v'), 
-        vod_fps, 
-        (vod_shape[1],vod_shape[0])
-    )
-
-    while vod_1.isOpened():
-        ret_1, frame_1 = vod_1.read()
-        if not ret_1: # if frame is read correctly ret is True
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-
-        while vod_2.isOpened():
-            ret_2, frame_2 = vod_2.read()
-            if not ret_2: # if frame is read correctly ret is True
+        # create a final binary mask image
+        mask_final = np.zeros(self.vod_shape, dtype="uint8")
+        mask_final[yoff:yoff_max, xoff:xoff_max] = mask[0:yoff_max-yoff, 0:xoff_max-xoff]
+        
+        if (self.verbose):
+            cv2.imshow("Final Mask", mask_final)
+            cv2.waitKey(0)
+        
+        return mask_final
+    
+    def apply_mask(self):
+        # open vod and read it
+        while self.vod.isOpened():
+            ret, frame = self.vod.read()
+            if not ret: # if frame is read correctly ret is True
                 print("Can't receive frame (stream end?). Exiting ...")
                 break
 
-        
-            out.write(result)
-            cv2.imshow("Mask Applied to Image", result)
-            if cv2.waitKey(1) == ord('q'):
-                break
+            # apply mask
+            frame = cv2.bitwise_and(frame, frame, mask=self.mask)
 
-    vod_1.release()
-    vod_2.release()
-    out.release()
-    cv2.destroyAllWindows()
+            # write opened frame to output path
+            self.out.write(frame)
 
-def main():
-    vod_path = './vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_EDITED.mp4'
-    mask_path_1 = vod_path[:-10]+'MASK_COLOR.mp4'
-    mask_path_2 = vod_path[:-10]+'MASK_DEFAULT.mp4'
-    color_path = vod_path[:-10]+'COLOR.mp4'
-    out_path = vod_path[:-10]+'FINAL.mp4'
+            # if verbose, show video
+            if (self.verbose):
+                cv2.imshow("Mask Applied to Image", frame)
+                if cv2.waitKey(1) == ord('q'):
+                    break
 
-    highlight_color(vod_path=vod_path, team='attack', out_path=color_path)
-    # add_mask(vod_path=color_path, vod_map='split', out_path=mask_path_1)
-    # combine_masks(vod_path_1=mask_path_1, vod_path_2=mask_path_2, out_path=out_path)
-    cv2.destroyAllWindows()
+        self.vod.release()
+        self.out.release()
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    main()
+    vod_path = './vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_EDITED.mp4'
+    Vod_Masker(
+        vod_path=vod_path,
+        vod_map='split',
+        verbose=True,
+    )
