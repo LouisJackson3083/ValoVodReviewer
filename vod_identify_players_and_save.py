@@ -1,6 +1,13 @@
 import cv2
 import numpy as np
 from tracker import *
+import os
+import glob
+
+# Remove all unsorted training images
+files = glob.glob('./training_images/unsorted/*')
+for f in files:
+    os.remove(f)
 
 cap = cv2.VideoCapture('./vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_MASKED.mp4')
 
@@ -13,6 +20,8 @@ while True:
     if not ret: # if frame is read correctly ret is True
         print("Can't receive frame (stream end?). Exiting ...")
         break
+    
+    frame_info = frame
 
     # 1. Object detection
     mask = object_detector.apply(frame)
@@ -42,12 +51,15 @@ while True:
     boxes_ids = tracker.update(detections)
     for box_id in boxes_ids:
         x, y, w, h, id = box_id
-        cv2.putText(frame, str(id), (x, y - 15), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0 , 0), 2)
-        cv2.rectangle(frame, (x,y), (x+w, y+h), (0, 255, 0), 3)
+
+        identified_player = frame[y:y+h, x:x+w]
+        filename = './training_images/unsorted/'+str(box_id)+'.png'
+        cv2.imwrite(filename, identified_player)
+        cv2.putText(frame_info, str(id), (x, y - 15), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0 , 0), 2)
+        cv2.rectangle(frame_info, (x,y), (x+w, y+h), (0, 255, 0), 3)
 
 
-
-    cv2.imshow("Frame", frame)
+    cv2.imshow("Frame", frame_info)
     cv2.imshow("Mask", mask)
     
     if cv2.waitKey(2) == ord('q'):

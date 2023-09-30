@@ -9,7 +9,7 @@ class EuclideanDistTracker:
         self.id_count = 0
         # How far back should the tracker look for detected objects?
         # This is to prevent "flickering"
-        self.frame_limit = 150
+        self.frame_limit = 300
         self.max_object_distance = 15
 
     def update(self, detected_objects):
