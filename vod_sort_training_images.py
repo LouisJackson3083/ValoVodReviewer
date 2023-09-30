@@ -3,8 +3,10 @@ import cv2
 
 directory = './training_images/unsorted/'
 for filename in os.listdir(directory):
+    # Skip the git ignore file
+    if (filename == '.gitignore'): continue
     f = os.path.join(directory, filename)
-    print(f)
+
     # checking if it is a file
     if os.path.isfile(f):
         image = cv2.imread(f)
@@ -13,8 +15,34 @@ for filename in os.listdir(directory):
         cv2.imshow('image', image_big)
         key_press = cv2.waitKey(0)
         cv2.destroyWindow('image')
-        if key_press == ord('q'):
+
+        # r = Raze
+        # o = Omen
+        # s = Skye
+        # k = Killjoy
+        # b = Breach
+        # 
+
+        identified_feature = None
+
+        if (key_press == 27): # If we press escape, get out
             break
+        elif (key_press == 32):
+            identified_feature = 'spike'
+        elif (key_press == ord('r')):
+            identified_feature = 'raze'
+        elif (key_press == ord('o')):
+            identified_feature = 'omen'
+        elif (key_press == ord('s')):
+            identified_feature = 'skye'
+        elif (key_press == ord('k')):
+            identified_feature = 'killjoy'
+        elif (key_press == ord('b')):
+            identified_feature = 'breach'
         else:
             continue
+        
+        output_filename = './training_images/sorted/'+str(identified_feature)+str(hash(filename))+'.png'
+        os.remove(f)
+        cv2.imwrite(output_filename, image)
 cv2.destroyAllWindows()

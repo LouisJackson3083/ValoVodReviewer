@@ -9,7 +9,8 @@ files = glob.glob('./training_images/unsorted/*')
 for f in files:
     os.remove(f)
 
-cap = cv2.VideoCapture('./vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_MASKED.mp4')
+vod_path = './vods/DRX vs FNATIC - VALORANT Champions - Knockout - Fracture Map 3_MASKED.mp4'
+cap = cv2.VideoCapture(vod_path)
 
 tracker = EuclideanDistTracker()
 
@@ -21,10 +22,10 @@ while True:
         print("Can't receive frame (stream end?). Exiting ...")
         break
     
-    frame_info = frame
+    frame_info = frame.copy()
 
     # 1. Object detection
-    mask = object_detector.apply(frame)
+    mask = object_detector.apply(frame_info)
     # Processing on the mask
     _ , mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
     erode_kernel = np.ones((3, 3), np.uint8)
@@ -53,13 +54,14 @@ while True:
         x, y, w, h, id = box_id
 
         identified_player = frame[y:y+h, x:x+w]
-        filename = './training_images/unsorted/'+str(box_id)+'.png'
+        filename = './training_images/unsorted/'+str(hash(vod_path))+'_'+str(box_id)+'.png'
         cv2.imwrite(filename, identified_player)
         cv2.putText(frame_info, str(id), (x, y - 15), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0 , 0), 2)
         cv2.rectangle(frame_info, (x,y), (x+w, y+h), (0, 255, 0), 3)
 
 
-    cv2.imshow("Frame", frame_info)
+    cv2.imshow("Frame_info", frame_info)
+    cv2.imshow("Frame", frame)
     cv2.imshow("Mask", mask)
     
     if cv2.waitKey(2) == ord('q'):
