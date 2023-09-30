@@ -1,53 +1,66 @@
 import math
 
-
 class EuclideanDistTracker:
     def __init__(self):
-        # Store the center positions of the objects
-        self.center_points = {}
-        # Keep the count of the IDs
-        # each time a new object id detected, the count will increase by one
+        # Here we create a queue of frames that contain a dictionary
+        # of centre positions of detected objects
+        self.frames = [{}]
+        # Keep count of the object IDs
         self.id_count = 0
+        # How far back should the tracker look for detected objects?
+        # This is to prevent "flickering"
+        self.frame_limit = 150
+        self.max_object_distance = 15
 
+    def update(self, detected_objects):
+        tracked_object_ids = []
 
-    def update(self, objects_rect):
-        # Objects boxes and ids
-        objects_bbs_ids = []
-
-        # Get center point of new object
-        for rect in objects_rect:
-            x, y, w, h = rect
+        # Get the centre point of a detected object
+        for object in detected_objects:
+            # get the position, and size
+            x, y, w, h = object
             cx = (x + x + w) // 2
             cy = (y + y + h) // 2
 
-            # Find out if that object was detected already
-            same_object_detected = False
-            for id, pt in self.center_points.items():
-                dist = math.hypot(cx - pt[0], cy - pt[1])
+            # Find out if the object has been detected already
+            redetected_object = False
+            best_dist = self.max_object_distance
+            best_rect = None
+            # for each dict of centre points
+            for centre_points in self.frames:
+                # get the id, position of each previously detected object
+                for id, pt in centre_points.items():
+                    # calculate the euclidean distance
+                    dist = math.hypot(cx-pt[0], cy-pt[1])
+                    
+                    # if the distance is small enough, we have a match
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_rect = [x, y, w, h, id]
+                        redetected_object = True
+            
+            if (redetected_object == True):
+                # append the redetected object, pop it from the dictionary
+                tracked_object_ids.append(best_rect)
+                for centre_points in self.frames:
+                    if (best_rect[4] in centre_points):
+                        centre_points.pop(best_rect[4])
 
-                if dist < 25:
-                    self.center_points[id] = (cx, cy)
-                    print(self.center_points)
-                    objects_bbs_ids.append([x, y, w, h, id])
-                    same_object_detected = True
-                    break
-
-            # New object is detected we assign the ID to that object
-            if same_object_detected is False:
-                self.center_points[self.id_count] = (cx, cy)
-                objects_bbs_ids.append([x, y, w, h, self.id_count])
+            # If we have detected a new object
+            if (redetected_object == False):
+                tracked_object_ids.append([x, y, w, h, self.id_count])
                 self.id_count += 1
+            
+        new_objects = {}
+        for tracked_object in tracked_object_ids:
+            x, y, w, h, id = tracked_object
+            cx = (x + x + w) // 2
+            cy = (y + y + h) // 2
+            new_objects[id] = (cx, cy)
+        self.frames.append(new_objects)
+        
+        if (len(self.frames) > self.frame_limit):
+            self.frames.pop(0)
 
-        # Clean the dictionary by center points to remove IDS not used anymore
-        new_center_points = {}
-        for obj_bb_id in objects_bbs_ids:
-            _, _, _, _, object_id = obj_bb_id
-            center = self.center_points[object_id]
-            new_center_points[object_id] = center
-
-        # Update dictionary with IDs not used removed
-        self.center_points = new_center_points.copy()
-        return objects_bbs_ids
-
-
-
+        return tracked_object_ids
+        
