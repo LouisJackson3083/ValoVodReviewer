@@ -40,10 +40,7 @@ for class_label in class_labels:
     val_split_idx = int(0.5 * len(test_or_val_samples))
     validation_samples += test_or_val_samples[:val_split_idx]
     test_samples += test_or_val_samples[val_split_idx:]
-
-    print(split_idx, val_split_idx, len(class_list))
     
-print(len(train_samples), len(test_samples), len(validation_samples), len(files))
 
 assert len(files) == len(train_samples) + len(validation_samples) + len(
     test_samples
@@ -65,3 +62,15 @@ def get_labels(paths):
 train_img_paths, train_labels = get_labels(train_samples)
 validation_img_paths, validation_labels = get_labels(validation_samples)
 test_img_paths, test_labels = get_labels(test_samples)
+
+def load_image(image_path):
+    image = tf.io.read_file(image_path)
+    image = tf.image.decode_png(image, 1)
+    image = tf.cast(image, tf.float32) / 255.0
+    return image
+
+_, ax = plt.subplots(4, 4, figsize=(15, 8)) 
+img = load_image(train_img_paths[0])
+img = tf.image.flip_left_right(img)
+ax.imshow(img, cmap="gray")
+

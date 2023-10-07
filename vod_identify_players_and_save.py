@@ -5,7 +5,7 @@ import os
 import glob
 
 # Remove all unsorted training images
-files = glob.glob('./training_images/unsorted/*')
+files = glob.glob('./data/unsorted/*')
 for f in files:
     os.remove(f)
 
@@ -54,7 +54,7 @@ while True:
         x, y, w, h, id = box_id
 
         identified_player = frame[y:y+h, x:x+w]
-        filename = './training_images/unsorted/'+str(hash(vod_path))+'_'+str(box_id)+'.png'
+        filename = './data/unsorted/'+str(hash(vod_path))+'_'+str(box_id)+'.png'
         cv2.imwrite(filename, identified_player)
         cv2.putText(frame_info, str(id), (x, y - 15), cv2.FONT_HERSHEY_PLAIN, 1, (255, 0 , 0), 2)
         cv2.rectangle(frame_info, (x,y), (x+w, y+h), (0, 255, 0), 3)

@@ -1,7 +1,7 @@
 import os
 import cv2
 
-directory = './training_images/unsorted/'
+directory = './data/unsorted/'
 for filename in os.listdir(directory):
     # Skip the git ignore file
     if (filename == '.gitignore'): continue
@@ -42,7 +42,10 @@ for filename in os.listdir(directory):
         else:
             continue
         
-        output_filename = './training_images/sorted/'+str(identified_feature)+str(hash(filename))+'.png'
+        newpath = './data/sorted/'+str(identified_feature)+'/'
+        if not os.path.exists(newpath):
+            os.makedirs(newpath)
+        output_filename = newpath+str(hash(filename))+'.png'
         os.remove(f)
         cv2.imwrite(output_filename, image)
 cv2.destroyAllWindows()
