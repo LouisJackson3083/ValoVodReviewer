@@ -48,4 +48,5 @@ for filename in os.listdir(directory):
         output_filename = newpath+str(hash(filename))+'.png'
         os.remove(f)
         cv2.imwrite(output_filename, image)
+        
 cv2.destroyAllWindows()
